@@ -1,43 +1,155 @@
-// Variables globales
-let allBooks = [];
-let filteredBooks = [];
-// --- VARIABLES POUR LA PAGINATION ---
-let currentPage = 1;
-const itemsPerPage = 24; // Ex: 24 livres par page (divisible par 4 colonnes = 6 lignes)
-// Utilitaire pour récupérer une valeur CSV sans se soucier des majuscules/accents
-function getVal(row, possibleKeys) {
-    if (!row) return '';
-    const keys = Object.keys(row);
-    for (let pk of possibleKeys) {
-        const found = keys.find(k => k.trim().toLowerCase() === pk.toLowerCase());
-        if (found && row[found] !== undefined && row[found] !== null) return row[found].toString().trim();
+// ==========================================
+// VARIABLES GLOBALES
+// ==========================================
+let allBooks = [];         // Contient tous les livres du catalogue
+let filteredBooks = [];    // Contient les livres après filtrage
+let currentPage = 1;       // Page courante
+const itemsPerPage = 24;   // Nombre de livres affichés par page (ex: 6 lignes de 4 cartes)
+
+// ==========================================
+// 1. CHARGEMENT DU CATALOGUE CSV
+// ==========================================
+window.addEventListener('DOMContentLoaded', function() {
+    const statusEl = document.getElementById('status');
+
+    if (statusEl) {
+        statusEl.style.color = '#475569';
+        statusEl.textContent = "Chargement du catalogue...";
+    }
+
+    // Ajout d'un paramètre anti-cache (?v=timestamp)
+    fetch('livres.csv?v=' + new Date().getTime())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Fichier introuvable sur le serveur (Erreur ${response.status})`);
+            }
+            return response.text();
+        })
+        .then(csvText => {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(res) {
+                    if (res.data && res.data.length > 0) {
+                        allBooks = res.data;
+                        filteredBooks = [...allBooks]; // Au départ, tous les livres sont affichés
+
+                        if (statusEl) {
+                            statusEl.style.color = '#16a34a';
+                            statusEl.textContent = `✅ ${allBooks.length} livres disponibles`;
+                        }
+
+                        // Écouteurs d'événements sur les champs de filtrage
+                        setupFilterListeners();
+
+                        // Premier affichage
+                        render();
+                    } else {
+                        if (statusEl) {
+                            statusEl.style.color = '#dc2626';
+                            statusEl.textContent = "❌ Le fichier CSV semble vide.";
+                        }
+                    }
+                }
+            });
+        })
+        .catch(err => {
+            console.error("Erreur de chargement :", err);
+            if (statusEl) {
+                statusEl.style.color = '#dc2626';
+                statusEl.textContent = `❌ Impossible de charger le catalogue : ${err.message}`;
+            }
+        });
+});
+
+// ==========================================
+// 2. ÉCOUTEURS D'ÉVÉNEMENTS POUR LES FILTRES
+// ==========================================
+function setupFilterListeners() {
+    const filterIds = ['fCote', 'fTitre', 'fAuteur', 'fResume'];
+    filterIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                currentPage = 1; // Réinitialise à la page 1 lors d'une nouvelle recherche
+                applyFilters();
+            });
+        }
+    });
+}
+
+// ==========================================
+// 3. RECHERCHE & FILTRAGE (SANS ACCENTS)
+// ==========================================
+
+// Nettoie une chaîne : minuscules + suppression de tous les accents
+function cleanString(str) {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, ""); // Expression Unicode universelle
+}
+
+// Récupère la valeur d'une clé dans un objet de livre (gère les variantes d'en-têtes)
+function getVal(bookObj, keysArray) {
+    if (!bookObj) return '';
+    for (let key of keysArray) {
+        if (bookObj[key] !== undefined && bookObj[key] !== null) {
+            return String(bookObj[key]).trim();
+        }
     }
     return '';
 }
 
-// Nettoyage HTML pour éviter les failles
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Application des filtres de recherche
+function applyFilters() {
+    const elCote = document.getElementById('fCote');
+    const elTitre = document.getElementById('fTitre');
+    const elAuteur = document.getElementById('fAuteur');
+    const elResume = document.getElementById('fResume');
+
+    const c = cleanString(elCote ? elCote.value : '');
+    const t = cleanString(elTitre ? elTitre.value : '');
+    const a = cleanString(elAuteur ? elAuteur.value : '');
+    const r = cleanString(elResume ? elResume.value : '');
+
+    filteredBooks = allBooks.filter(b => {
+        const cote = cleanString(getVal(b, ['Cote']));
+        const titre = cleanString(getVal(b, ['Titre']));
+        const auteur = cleanString(getVal(b, ['Auteur']));
+        const resume = cleanString(getVal(b, ['Résumé', 'Resume']));
+
+        return (!c || cote.includes(c)) &&
+               (!t || titre.includes(t)) &&
+               (!a || auteur.includes(a)) &&
+               (!r || resume.includes(r));
+    });
+
+    render();
 }
 
-// Surlignage du mot-clé dans le résumé
-function highlightText(text, search) {
-    if (!search) return escapeHtml(text);
-    const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const regex = new RegExp(`(${escapedSearch})`, 'gi');
-    return escapeHtml(text).replace(regex, '<mark class="highlight">$1</mark>');
+// Securise le texte contre les injections HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
-// Affichage du tableau et du compteur
+// ==========================================
+// 4. AFFICHAGE DES CARTES & PAGINATION
+// ==========================================
 function render() {
     const grid = document.getElementById('booksGrid');
     const countElement = document.getElementById('bookCount');
-    const paginationElement = document.getElementById('pagination');
 
     if (!grid) return;
 
-    // 1. Mise à jour du compteur global
+    // Mise à jour du compteur global
     if (countElement) {
         if (allBooks.length === 0) {
             countElement.textContent = "Aucun livre dans le catalogue.";
@@ -48,27 +160,24 @@ function render() {
         }
     }
 
-    // 2. Si aucun résultat
+    // Aucun résultat trouvé
     if (filteredBooks.length === 0) {
         grid.innerHTML = '<div class="no-results">Aucun livre ne correspond à votre recherche.</div>';
-        if (paginationElement) paginationElement.innerHTML = '';
+        renderPagination(0);
         return;
     }
 
-    // 3. Découpage des résultats pour la page actuelle
+    // Calculs de pagination
     const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
-    
-    // Si la page actuelle dépasse le total suite à un filtrage, on revient à la page 1
     if (currentPage > totalPages) currentPage = 1;
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const booksToDisplay = filteredBooks.slice(startIndex, endIndex);
 
-    // 4. Génération des cartes HTML (uniquement pour la page courante)
+    // Génération des cartes (pavés) HTML
     grid.innerHTML = booksToDisplay.map((b, i) => {
-        // Indice réel du livre dans le tableau filteredBooks
-        const realIndex = startIndex + i; 
+        const realIndex = startIndex + i; // Indice réel dans le tableau filtré
 
         const cote = escapeHtml(getVal(b, ['Cote']) || '-');
         const titre = escapeHtml(getVal(b, ['Titre']) || 'Sans titre');
@@ -92,178 +201,108 @@ function render() {
         `;
     }).join('');
 
-    // 5. Génération des boutons de pagination
+    // Affichage des boutons de pagination
     renderPagination(totalPages);
 }
-// Fonction qui génère les boutons 1, 2, 3...
+
+// Génération des boutons de navigation (1, 2, 3...)
 function renderPagination(totalPages) {
     const paginationElement = document.getElementById('pagination');
-    if (!paginationElement || totalPages <= 1) {
-        if (paginationElement) paginationElement.innerHTML = '';
+    if (!paginationElement) return;
+
+    if (totalPages <= 1) {
+        paginationElement.innerHTML = '';
         return;
     }
 
-    let buttonsHtml = `
+    let html = `
         <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">❮ Précédent</button>
     `;
 
     for (let i = 1; i <= totalPages; i++) {
-        // Affiche la page si elle est proche de la page courante
         if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-            buttonsHtml += `
-                <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>
-            `;
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
         } else if (i === currentPage - 3 || i === currentPage + 3) {
-            buttonsHtml += `<span class="page-dots">...</span>`;
+            html += `<span class="page-dots">...</span>`;
         }
     }
 
-    buttonsHtml += `
+    html += `
         <button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">Suivant ❯</button>
     `;
 
-    paginationElement.innerHTML = buttonsHtml;
+    paginationElement.innerHTML = html;
 }
 
-// Changement de page
+// Changement de page au clic
 function changePage(newPage) {
     currentPage = newPage;
     render();
-    // Remonte doucement en haut de la grille pour le confort
-    document.getElementById('booksGrid').scrollIntoView({ behavior: 'smooth' });
-}
-// Fonction utilitaire pour retirer tous les accents et mettre en minuscules
-// Fonction utilitaire robuste pour retirer TOUS les accents / diacritiques
-function cleanString(str) {
-    if (!str) return '';
-    return str
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, ""); // Supprime tous les accents (méthode Unicode universelle)
-}
-
-// Application des filtres de recherche (insensible aux accents et majuscules)
-function applyFilters() {
-    const elCote = document.getElementById('fCote');
-    const elTitre = document.getElementById('fTitre');
-    const elAuteur = document.getElementById('fAuteur');
-    const elResume = document.getElementById('fResume');
-
-    // Nettoyage de ce que saisit l'utilisateur (sans accents, sans majuscules)
-    const c = cleanString(elCote ? elCote.value : '');
-    const t = cleanString(elTitre ? elTitre.value : '');
-    const a = cleanString(elAuteur ? elAuteur.value : '');
-    const r = cleanString(elResume ? elResume.value : '');
-
-    filteredBooks = allBooks.filter(b => {
-        // Nettoyage des données des livres pour la comparaison
-        const cote = cleanString(getVal(b, ['Cote']));
-        const titre = cleanString(getVal(b, ['Titre']));
-        const auteur = cleanString(getVal(b, ['Auteur']));
-        const resume = cleanString(getVal(b, ['Résumé', 'Resume']));
-
-        return (!c || cote.includes(c)) &&
-               (!t || titre.includes(t)) &&
-               (!a || auteur.includes(a)) &&
-               (!r || resume.includes(r));
-    });
-
-    render();
-}
-// Remise à zéro des filtres
-function resetFilters() {
-    if (document.getElementById('fCote')) document.getElementById('fCote').value = '';
-    if (document.getElementById('fTitre')) document.getElementById('fTitre').value = '';
-    if (document.getElementById('fAuteur')) document.getElementById('fAuteur').value = '';
-    if (document.getElementById('fResume')) document.getElementById('fResume').value = '';
-    applyFilters();
-}
-
-// Gestion de la Pop-up (Modal)
-function openModal(i) {
-    const b = filteredBooks[i];
-    if (!b) return;
-
-    const elResume = document.getElementById('fResume');
-    const searchTerm = elResume ? elResume.value.trim() : '';
-
-    document.getElementById('mTitre').textContent = getVal(b, ['Titre']) || 'Sans titre';
-    document.getElementById('mAuteur').textContent = getVal(b, ['Auteur']) || '-';
-    document.getElementById('mCote').textContent = getVal(b, ['Cote']) || '-';
-    document.getElementById('mType').textContent = getVal(b, ['Type']) || '-';
-    document.getElementById('mDispo').textContent = getVal(b, ['Disponibilité', 'Disponibilite']) || '-';
-    document.getElementById('mFond').textContent = getVal(b, ['Fond', 'Fonds']) || '-';
-    
-    const date = getVal(b, ['Date']);
-    const edit = getVal(b, ['Édition', 'Edition']);
-    document.getElementById('mDateEdit').textContent = (date || '-') + (edit ? ` (Éd. ${edit})` : '');
-    
-    document.getElementById('mTome').textContent = getVal(b, ['Tome']) || '-';
-    document.getElementById('mTheme').textContent = (getVal(b, ['Thème général', 'Theme general']) || '-') + ' / ' + (getVal(b, ['Thème particulier', 'Theme particulier']) || '-');
-    
-    const rawResume = getVal(b, ['Résumé', 'Resume']) || 'Aucun résumé renseigné.';
-    const mResume = document.getElementById('mResume');
-    
-    if (searchTerm && rawResume !== 'Aucun résumé renseigné.') {
-        mResume.innerHTML = highlightText(rawResume, searchTerm);
-    } else {
-        mResume.textContent = rawResume;
+    const grid = document.getElementById('booksGrid');
+    if (grid) {
+        grid.scrollIntoView({ behavior: 'smooth' });
     }
-    
-    document.getElementById('modal').classList.add('active');
 }
-//Fermeture pop-up modal par la croix X
+
+// ==========================================
+// 5. FENÊTRE MODALE (DETAILS D'UN LIVRE)
+// ==========================================
+function openModal(index) {
+    const book = filteredBooks[index];
+    if (!book) return;
+
+    const modal = document.getElementById('bookModal');
+    const modalContent = document.getElementById('modalContent');
+
+    if (!modal || !modalContent) return;
+
+    const cote = escapeHtml(getVal(book, ['Cote']) || '-');
+    const titre = escapeHtml(getVal(book, ['Titre']) || 'Sans titre');
+    const auteur = escapeHtml(getVal(book, ['Auteur']) || 'Inconnu');
+    const stat = escapeHtml(getVal(book, ['Statut', 'Disponibilité']) || '-');
+    const loc = escapeHtml(getVal(book, ['Localisation', 'Emplacement']) || '-');
+    const dep = escapeHtml(getVal(book, ['Département', 'Departement']) || '-');
+    const annee = escapeHtml(getVal(book, ['Année', 'Annee']) || '-');
+    const type = escapeHtml(getVal(book, ['Type']) || '-');
+    const theme = escapeHtml(getVal(book, ['Thème général', 'Theme general']) || '-');
+    const subtheme = escapeHtml(getVal(book, ['Sous-thème', 'Sous-theme', 'Thème']) || '-');
+    const resume = escapeHtml(getVal(book, ['Résumé', 'Resume']) || 'Aucun résumé disponible pour ce livre.');
+
+    modalContent.innerHTML = `
+        <div class="modal-header">
+            <span class="cote-badge">${cote}</span>
+            <span class="modal-status">${stat}</span>
+        </div>
+        <h2 class="modal-title">${titre}</h2>
+        <p class="modal-author">✍️ <strong>Auteur :</strong> ${auteur}</p>
+        <hr class="modal-divider">
+        <div class="modal-details-grid">
+            <p><strong>Année :</strong> ${annee}</p>
+            <p><strong>Type :</strong> ${type}</p>
+            <p><strong>Thème :</strong> ${theme}</p>
+            <p><strong>Sous-thème :</strong> ${subtheme}</p>
+            <p><strong>Localisation :</strong> ${loc}</p>
+            <p><strong>Département :</strong> ${dep}</p>
+        </div>
+        <hr class="modal-divider">
+        <div class="modal-resume-section">
+            <h3>📖 Résumé</h3>
+            <p class="modal-resume-text">${resume}</p>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
 function closeModal() {
-    const modal = document.getElementById('modal');
-    if (modal) modal.classList.remove('active');
+    const modal = document.getElementById('bookModal');
+    if (modal) modal.style.display = 'none';
 }
-//Fermeture pop-up modal par clic extérieur
+
+// Fermeture de la modale si on clique à l'extérieur
 window.addEventListener('click', function(e) {
-    const modal = document.getElementById('modal');
+    const modal = document.getElementById('bookModal');
     if (e.target === modal) {
         closeModal();
     }
-});
-// --- CHARGEMENT AUTOMATIQUE DEPUIS GITHUB ---
-window.addEventListener('DOMContentLoaded', function() {
-    const statusEl = document.getElementById('status');
-
-    if (statusEl) {
-        statusEl.style.color = 'black';
-        statusEl.textContent = "Chargement du catalogue...";
-    }
-
-    fetch('livres.csv')
-        .then(response => {
-            if (!response.ok) throw new Error("Fichier introuvable");
-            return response.text();
-        })
-        .then(csvText => {
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(res) {
-                    if (res.data && res.data.length > 0) {
-                        allBooks = res.data;
-                        if (statusEl) {
-                            statusEl.style.color = '#16a34a';
-                            statusEl.textContent = `✅ ${allBooks.length} livres disponibles`;
-                        }
-                        applyFilters();
-                    } else {
-                        if (statusEl) {
-                            statusEl.style.color = '#dc2626';
-                            statusEl.textContent = "❌ Le catalogue est vide.";
-                        }
-                    }
-                }
-            });
-        })
-        .catch(err => {
-            console.error(err);
-            if (statusEl) {
-                statusEl.style.color = '#dc2626';
-                statusEl.textContent = "❌ Impossible de charger le catalogue.";
-            }
-        });
 });

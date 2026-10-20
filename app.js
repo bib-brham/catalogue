@@ -185,6 +185,7 @@ function openModal(i) {
     if (!b) return;
 	const surplace=getVal(b, ['Disponibilité'])=='Sur Place' ? 'surplace':'disponible'; 
 	document.getElementById('modalCont').classList.remove("surplace","disponible");
+	document.getElementById('modalCont').classList.add(surplace);
     const elResume = document.getElementById('fResume');
     const searchTerm = elResume ? elResume.value.trim() : '';
 

@@ -174,9 +174,7 @@
     border-radius: 8px;
     color: #64748b;
 }
-/*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
-.surplace {background:#ffe7e7}
-.disponible {background:#efefef}
+
 /* --- RESPONSIVE (Tablettes & Smartphones) --- */
 @media (max-width: 1024px) {
     .books-grid {
@@ -239,3 +237,6 @@
     color: #64748b;
     padding: 0 4px;
 }
+/*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
+.surplace {background:#ffe7e7}
+.disponible {background:#efefef}

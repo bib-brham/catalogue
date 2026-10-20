@@ -59,6 +59,10 @@
             border-radius: 3px;
             font-weight: bold;
         }
+		/* légende pour couleur des cartes*/
+	.legende {float:left}
+	.legende span {border-radius: 10px;border:1px solid #000;padding:3px;margin:5px;}
+	/* Nbre trouvés */
 		.results-info {
     display: flex;
     justify-content: flex-end;
@@ -77,6 +81,9 @@
     margin: 0 4px;
     font-size: 0.85rem;
 }
+/*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
+.surplace {background:#ffe7e7}
+.disponible {background:#efefef}
 /* --- GRILLE DES LIVRES (4 par ligne sur grand écran) --- */
 .books-grid {
     display: grid;

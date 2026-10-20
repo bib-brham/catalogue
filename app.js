@@ -75,9 +75,9 @@ function render() {
         const auteur = escapeHtml(getVal(b, ['Auteur']) || 'Auteur inconnu');
         const type = escapeHtml(getVal(b, ['Type']) || '');
         const theme = escapeHtml(getVal(b, ['Thème général', 'Theme general']) || '');
-
+		const surplace=escapeHtml(getVal(b, ['Disponibilité']))=='Sur Place' ? 'surplace':'disponible';
         return `
-            <div class="book-card" onclick="openModal(${realIndex})">
+            <div class="book-card ${surplace}" onclick="openModal(${realIndex})">
                 <div class="card-header">
                     <span class="cote-badge">${cote}</span>
                     ${type ? `<span class="type-badge">${type}</span>` : ''}
@@ -183,7 +183,8 @@ function resetFilters() {
 function openModal(i) {
     const b = filteredBooks[i];
     if (!b) return;
-
+	const surplace=getVal(b, ['Disponibilité'])=='Sur Place' ? 'surplace':'disponible'; 
+	document.getElementById('modalCont').classList.remove("surplace","disponible");
     const elResume = document.getElementById('fResume');
     const searchTerm = elResume ? elResume.value.trim() : '';
 

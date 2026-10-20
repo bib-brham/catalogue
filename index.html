@@ -32,6 +32,7 @@
     </div>
 	<!-- BANDEAU COMPTEUR DE RÉSULTATS -->
 	<div class="results-info">
+		<div class="legende"><span id="leg-empruntable" class="disponible">Livres empruntables</span><span id="leg-surplace" class="surplace">Livres à consulter sur place</span></div>
 		<span id="bookCount">Chargement du catalogue...</span>
 	</div>
 	<!-- Grille des livres -->
@@ -43,7 +44,7 @@
 
 <!-- Modal / Pop-up -->
 <div class="modal-overlay" id="modal">
-    <div class="modal-content">
+    <div class="modal-content" id="modalCont>
         <button class="modal-close" onclick="closeModal()">&times;</button>
         <h2 id="mTitre" style="color:var(--primary); margin-top:0;"></h2>
         <p id="mAuteur" style="color:var(--accent); font-weight:bold;"></p>

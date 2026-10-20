@@ -81,9 +81,7 @@
     margin: 0 4px;
     font-size: 0.85rem;
 }
-/*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
-.surplace {background:#ffe7e7}
-.disponible {background:#efefef}
+
 /* --- GRILLE DES LIVRES (4 par ligne sur grand écran) --- */
 .books-grid {
     display: grid;
@@ -176,7 +174,9 @@
     border-radius: 8px;
     color: #64748b;
 }
-
+/*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
+.surplace {background:#ffe7e7}
+.disponible {background:#efefef}
 /* --- RESPONSIVE (Tablettes & Smartphones) --- */
 @media (max-width: 1024px) {
     .books-grid {

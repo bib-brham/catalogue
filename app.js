@@ -91,7 +91,27 @@ function render() {
             </div>
         `;
     }).join('');
-
+// Remplissage de la table d'impression (tous les résultats filtrés)
+    const printBody = document.getElementById('printTableBody');
+    if (printBody) {
+        printBody.innerHTML = filteredBooks.map(b => {
+            const cote = escapeHtml(getVal(b, ['Cote']) || '-');
+            const titre = escapeHtml(getVal(b, ['Titre']) || 'Sans titre');
+            const auteur = escapeHtml(getVal(b, ['Auteur']) || '-');
+            const type = escapeHtml(getVal(b, ['Type']) || '-');
+            const theme = escapeHtml(getVal(b, ['Thème particulier', 'Theme particulier']) || '-');
+            const dispo = escapeHtml(getVal(b, ['Disponibilité', 'Disponibilite']) || '-');
+            return `
+                <tr>
+                    <td>${cote}</strong></td>
+					<td>${titre}</td>
+                    <td>${auteur}</td>
+                    <td>${theme}</td>
+                    <td>${dispo}</td>
+                </tr>
+            `;
+        }).join('');
+    }
     // 5. Génération des boutons de pagination
     renderPagination(totalPages);
 }

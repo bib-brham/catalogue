@@ -7,6 +7,7 @@
     <!-- Parseur CSV spécialisé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 	<link rel="stylesheet" media="screen" href="style.css">
+	<link rel="stylesheet" media="print" href="print.css">	
     <style>
     </style>
 </head>
@@ -32,11 +33,27 @@
     </div>
 	<!-- BANDEAU COMPTEUR DE RÉSULTATS -->
 	<div class="legende"><span id="leg-empruntable" class="disponible">Livres empruntables</span><span id="leg-surplace" class="surplace">Livres à consulter sur place</span></div>
+	<button class="btn-reset" onclick="window.print()">🖨️ Imprimer la liste</button>
 	<div class="results-info">
 		<span id="bookCount">Chargement du catalogue...</span>
 	</div>
 	<!-- Grille des livres -->
 	<div id="booksGrid" class="books-grid"></div>
+	<!-- Tableau réservé à l'impression -->
+<div id="printTableContainer" class="print-only">
+  <table id="printTable">
+    <thead>
+      <tr>
+        <th>Cote</th>
+        <th>Titre</th>
+        <th>Auteur</th>
+        <th>Thème</th>
+        <th>Disp.</th>
+      </tr>
+    </thead>
+    <tbody id="printTableBody"></tbody>
+  </table>
+</div>	
 
 	<!-- Pagination du bas -->
 	<div id="pagination" class="pagination-container"></div>

@@ -237,6 +237,10 @@
     color: #64748b;
     padding: 0 4px;
 }
+/* Cache la table d'impression sur écran */
+.print-only {
+    display: none;
+}
 /*  COULEUR DE LA CARTE ET DU POP-UP empruntable ou sur place */
 .surplace {background:#ffe7e7}
 .disponible {background:#efefef}

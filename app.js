@@ -71,6 +71,8 @@ function render() {
         const auteur = escapeHtml(getVal(b, ['Auteur']) || 'Auteur inconnu');
         const type = escapeHtml(getVal(b, ['Type']) || '');
         const theme = escapeHtml(getVal(b, ['Thème général', 'Theme general']) || '');
+		const tome = escapeHtml(getVal(b, ['Tome']) || '');
+		const txtTome=tome!="" ? '&nbsp;(T '+tome+')':'';		
 		const surplace=escapeHtml(getVal(b, ['Disponibilité']))=='Sur Place' ? 'surplace':'disponible';
         return `
             <div class="book-card ${surplace}" onclick="openModal(${realIndex})">
@@ -78,7 +80,7 @@ function render() {
                     <span class="cote-badge">${cote}</span>
                     ${type ? `<span class="type-badge">${type}</span>` : ''}
                 </div>
-                <h3 class="card-title">${titre}</h3>
+                <h3 class="card-title">${titre}<span class="card-tome">${txtTome}</span></h3>
                 <p class="card-author">✍️ ${auteur}</p>
                 ${theme ? `<p class="card-theme">📁 ${theme}</p>` : ''}
                 <div class="card-footer">

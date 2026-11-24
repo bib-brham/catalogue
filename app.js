@@ -72,7 +72,7 @@ function render() {
         const type = escapeHtml(getVal(b, ['Type']) || '');
         const theme = escapeHtml(getVal(b, ['Thème général', 'Theme general']) || '');
 		const tome = escapeHtml(getVal(b, ['Tome']) || '');
-		const txtTome=tome!="" ? '&nbsp;(T '+tome+')':'';		
+		const txtTome=tome!="" ? '&nbsp;(T.'+tome+')':'';		
 		const surplace=escapeHtml(getVal(b, ['Disponibilité']))=='Sur Place' ? 'surplace':'disponible';
         return `
             <div class="book-card ${surplace}" onclick="openModal(${realIndex})">
